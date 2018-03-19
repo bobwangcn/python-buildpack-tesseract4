@@ -17,6 +17,8 @@ ENV NO_PROXY localhost,127.0.0.1,*.local,169.254/16,*.sap.corp,*.corp.sap,.sap.c
 
 RUN apt-get update && apt-get install -y autoconf autoconf-archive automake build-essential checkinstall cmake g++ git libcairo2-dev libcairo2-dev libicu-dev libicu-dev libjpeg8-dev libjpeg8-dev libpango1.0-dev libpango1.0-dev libpng12-dev libpng12-dev libtiff5-dev libtiff5-dev libtool pkg-config wget xzgv zlib1g-dev python3-pip
 
+# RUN apt-get remove -y gcc g++ gcc-5 && apt autoremove -y && apt-get install -y gcc-4.8 g++-4.8
+
 WORKDIR /root
 
 RUN git clone https://github.com/DanBloomberg/leptonica.git
@@ -27,7 +29,7 @@ RUN cd leptonica/ && \
 	make && make install && \
 	cd .. && \
 	cd tesseract/ && \
-	./autogen.sh && ./configure --disable-openmp && \
+	./autogen.sh && ./configure CC=gcc-4.8 --disable-openmp && \
 	LDFLAGS="-L/usr/local/lib" CFLAGS="-I/usr/local/include" make && \
 	make && \
 	make install && ldconfig
