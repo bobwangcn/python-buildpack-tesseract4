@@ -6,6 +6,52 @@ CACHE_DIR=$2
 BUILDPACK_PATH=$(dirname $(readlink -f ${BASH_SOURCE%/*}))
 DEPS_DIR="$BUILD_DIR/.cloudfoundry"
 
+cd $BUILD_DIR
+
+# download
+echo "-----> Downloading"
+ZBAR_URL="https://github.com/sheck/ZBar/archive/0.10-sourceforge.tar.gz"
+curl -L $ZBAR_URL -s | tar zx -C $BUILD_DIR
+
+cd ZBar-0.10-sourceforge
+
+# patching
+echo "-----> Applying JPEG patch"
+patch -p1 <<EOF
+diff --git a/zbar/jpeg.c b/zbar/jpeg.c
+index fb566f4..d1c1fb2 100644
+--- a/zbar/jpeg.c
++++ b/zbar/jpeg.c
+@@ -79,8 +79,15 @@ int fill_input_buffer (j_decompress_ptr cinfo)
+ void skip_input_data (j_decompress_ptr cinfo,
+                       long num_bytes)
+ {
+-    cinfo->src->next_input_byte = NULL;
+-    cinfo->src->bytes_in_buffer = 0;
++    if (num_bytes > 0) {
++        if (num_bytes < cinfo->src->bytes_in_buffer) {
++            cinfo->src->next_input_byte += num_bytes;
++            cinfo->src->bytes_in_buffer -= num_bytes;
++        }
++        else {
++            fill_input_buffer(cinfo);
++        }
++    }
+ }
+ void term_source (j_decompress_ptr cinfo)
+EOF
+
+# configure
+if [ -f configure ]; then
+  echo "-----> Configuring"
+  CFLAGS="" ./configure --disable-video --without-gtk --without-qt --prefix=$BUILD_DIR/vendor >/dev/null 2>&1
+fi
+
+# make
+echo "-----> Compiling with Make"
+make >/dev/null 2>&1
+make install >/dev/null 2>&1
+
 mkdir -p $CACHE_DIR
 mkdir -p "$DEPS_DIR/0"
 mkdir -p "$BUILD_DIR/.profile.d"
